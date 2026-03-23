@@ -85,11 +85,13 @@ This machine is a 2-in-1 tablet/laptop. When used in tablet mode (screen flipped
 
 **Workaround — manual rotation aliases in `~/.bashrc`:**
 ```bash
-alias flip='xrandr --output $(xrandr | grep " connected" | awk "{print \$1}") --rotate inverted'
-alias unflip='xrandr --output $(xrandr | grep " connected" | awk "{print \$1}") --rotate normal'
+alias flip='xrandr --output $(xrandr | grep " connected" | awk "{print \$1}") --rotate normal'
+alias unflip='xrandr --output $(xrandr | grep " connected" | awk "{print \$1}") --rotate inverted'
 ```
-- `flip` — rotate screen 180° for tablet mode
-- `unflip` — restore normal orientation
+- `unflip` — restore normal orientation (uses xrandr `inverted` — panel is physically mounted upside down in chassis)
+- `flip` — rotate for tablet mode (uses xrandr `normal`)
+
+**Note:** The display panel is physically mounted inverted in this chassis. xrandr `inverted` = visually correct. xrandr `normal` = visually upside down.
 
 ## Troubleshooting
 
