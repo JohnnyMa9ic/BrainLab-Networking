@@ -134,24 +134,40 @@ Both files are merged at startup by `channels.py`. IDs from `channels.yaml` take
 
 ---
 
-## YouTube Premium Authentication
+## Authentication — YouTube Premium + Crunchyroll
 
-YouTube Premium benefits (no ads, subscription content) are passed via a cookie file exported from Firefox.
+Both services are authenticated via a single Firefox cookie file. The Netscape cookies.txt format holds sessions for all logged-in domains in one export — YouTube Premium and Crunchyroll are captured together as long as both are logged in at export time.
 
 **Cookie file location:** `~/.config/streamerbox/cookies.txt`
 
-**One-time export command:**
+**One-time export command (run while logged into both YouTube and Crunchyroll in Firefox):**
 ```bash
 yt-dlp --cookies-from-browser firefox \
        --cookies ~/.config/streamerbox/cookies.txt \
        --skip-download "https://www.youtube.com"
 ```
 
-Run this once while logged into YouTube in Firefox. Re-run when cookies expire (typically every few months).
+This captures all active Firefox sessions. Re-run when cookies expire (typically every few months for both services).
 
-Cookies are passed to both mpv and yt-dlp at runtime. Paths are resolved via `os.path.expanduser("~")` in `player.py` and `search.py` at subprocess construction time — no hardcoded usernames:
+Cookies are passed to both mpv and yt-dlp at runtime. Paths resolved via `os.path.expanduser("~")` — no hardcoded usernames:
 - mpv: `--ytdl-raw-options=cookies=<expanded_home>/.config/streamerbox/cookies.txt`
 - yt-dlp: `--cookies <expanded_home>/.config/streamerbox/cookies.txt`
+
+**What this unlocks:**
+- YouTube: no ads, Premium content, subscription access
+- Crunchyroll: full library access, no ads, simulcast episodes
+
+**Crunchyroll URL format for `channels.yaml`:**
+```yaml
+- id: 3
+  name: One Piece
+  url: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
+- id: 4
+  name: Jujutsu Kaisen
+  url: https://www.crunchyroll.com/series/GRDQPM1ZY/jujutsu-kaisen
+```
+
+yt-dlp resolves Crunchyroll series and episode URLs the same way as YouTube playlists — series URLs enumerate all episodes, `--loop-playlist=inf` cycles them continuously.
 
 ---
 
@@ -214,7 +230,7 @@ The existing `~/.config/mpv/mpv.conf` settings remain for standalone mpv use; St
 | Stream fails / bad URL | `idle-active` IPC event detected → overlay shows error briefly → auto-advances to next channel after 3s |
 | yt-dlp search returns nothing | Search modal shows "NO SIGNAL — no results" |
 | mpv crashes | `player.py` detects dead subprocess via `poll()`, restarts mpv on same channel |
-| Cookies expired / auth error | yt-dlp stderr contains "Sign in" or HTTP 403 → overlay shows "AUTH REQUIRED — run: yt-dlp --cookies-from-browser firefox..." |
+| Cookies expired / auth error | yt-dlp stderr contains "Sign in", "Premium", "members only", or HTTP 403 → overlay shows "AUTH REQUIRED — run: yt-dlp --cookies-from-browser firefox..." |
 | Generic playback error | All other yt-dlp non-zero exits → overlay shows "PLAYBACK ERROR" with raw stderr message truncated to 80 chars |
 | No network | mpv `idle-active` event → overlay shows "NO SIGNAL" with nosignal.png |
 
@@ -243,9 +259,9 @@ Launches on GNOME login. mpv starts immediately on the first channel in `channel
 
 - [ ] Create `~/streamerbox/` and write app files
 - [ ] Create `~/.config/streamerbox/channels.yaml` with initial channels
-- [ ] Export YouTube cookies to `~/.config/streamerbox/cookies.txt`
+- [ ] Log into both YouTube and Crunchyroll in Firefox, then export cookies to `~/.config/streamerbox/cookies.txt`
 - [ ] Install `python3-gi` (already installed on Thought-Reliquary)
 - [ ] Install `xdotool` (`sudo apt install xdotool`) — required for key forwarding to mpv
 - [ ] Create `~/.config/autostart/streamerbox.desktop`
 - [ ] Create `assets/nosignal.png` (1920x1080)
-- [ ] Test: launch manually, verify mpv fills screen, overlay appears on keypress, channel switching works, search returns results, YouTube Premium content plays without ads, subtitle toggle works with `j`
+- [ ] Test: launch manually, verify mpv fills screen, overlay appears on keypress, channel switching works, search returns results, YouTube Premium plays without ads, Crunchyroll content plays without ads, subtitle toggle works with `j`
