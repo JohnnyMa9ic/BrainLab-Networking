@@ -56,7 +56,6 @@ x11vnc -display :0 -auth guess -forever -rfbauth ~/.vnc/passwd -rfbport 5900 -sh
 ```
 22/tcp   - SSH
 5900/tcp - VNC
-3389/tcp - RDP (xrdp installed but VNC preferred)
 ```
 
 Full UFW status confirmed active with all rules above (IPv4 + IPv6).
@@ -64,10 +63,18 @@ Full UFW status confirmed active with all rules above (IPv4 + IPv6).
 ## Packages Installed
 - `openssh-server` — SSH server
 - `x11vnc` — VNC server for X11
-- `xrdp` + `xorgxrdp` — RDP server (fallback, not primary)
+- `fail2ban` — SSH brute-force protection
+- `xrdp` + `xorgxrdp` — RDP server (installed but disabled; VNC preferred)
 - `xfce4` + `xfce4-goodies` — Lightweight desktop (used during xrdp testing; not default session)
 - `dbus-x11` — D-Bus X11 support
 - `gh` — GitHub CLI
+
+## System Optimizations
+- **fail2ban** — running, SSH jail active, starts on boot
+- **xrdp** — disabled and stopped; port 3389 closed in firewall
+- **vm.swappiness** — set to 10 (from 60) via `/etc/sysctl.d/99-swappiness.conf`; better for 15GB RAM machine
+- **ModemManager** — disabled (not needed on desktop)
+- **iio-sensor-proxy** — stopped (not needed on desktop, static unit)
 
 ## Troubleshooting
 
@@ -82,3 +89,4 @@ Full UFW status confirmed active with all rules above (IPv4 + IPv6).
 - wayvnc was attempted but GNOME's Wayland compositor doesn't expose the screencopy protocol
 - GNOME Remote Desktop (RDP) was attempted but credential storage via keyring was unreliable
 - x11vnc on X11 is the stable solution for this machine
+- xrdp remains installed but is disabled; remove with `sudo apt remove xrdp xorgxrdp` if no longer needed
