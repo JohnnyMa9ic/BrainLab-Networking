@@ -134,9 +134,11 @@ Both files are merged at startup by `channels.py`. IDs from `channels.yaml` take
 
 ---
 
-## Authentication — YouTube Premium + Crunchyroll
+## Authentication — YouTube Premium
 
-Both services are authenticated via a single Firefox cookie file. The Netscape cookies.txt format holds sessions for all logged-in domains in one export — YouTube Premium and Crunchyroll are captured together as long as both are logged in at export time.
+> **Note on Crunchyroll:** Crunchyroll's streaming service uses Widevine DRM which yt-dlp cannot bypass regardless of authentication. Direct `crunchyroll.com` URLs will not work in StreamerBox. Crunchyroll content must be watched via their browser/app. The cookies.txt still only needs YouTube sessions.
+
+YouTube Premium benefits (no ads, subscription content) are passed via a Firefox cookie file.
 
 **Cookie file location:** `~/.config/streamerbox/cookies.txt`
 
@@ -147,7 +149,7 @@ yt-dlp --cookies-from-browser firefox \
        --skip-download "https://www.youtube.com"
 ```
 
-This captures all active Firefox sessions. Re-run when cookies expire (typically every few months for both services).
+Run this once while logged into YouTube in Firefox. Re-run when cookies expire (typically every few months).
 
 Cookies are passed to both mpv and yt-dlp at runtime. Paths resolved via `os.path.expanduser("~")` — no hardcoded usernames:
 - mpv: `--ytdl-raw-options=cookies=<expanded_home>/.config/streamerbox/cookies.txt`
@@ -155,19 +157,8 @@ Cookies are passed to both mpv and yt-dlp at runtime. Paths resolved via `os.pat
 
 **What this unlocks:**
 - YouTube: no ads, Premium content, subscription access
-- Crunchyroll: full library access, no ads, simulcast episodes
 
-**Crunchyroll URL format for `channels.yaml`:**
-```yaml
-- id: 3
-  name: One Piece
-  url: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
-- id: 4
-  name: Jujutsu Kaisen
-  url: https://www.crunchyroll.com/series/GRDQPM1ZY/jujutsu-kaisen
-```
-
-yt-dlp resolves Crunchyroll series and episode URLs the same way as YouTube playlists — series URLs enumerate all episodes, `--loop-playlist=inf` cycles them continuously.
+**Supported sources:** YouTube videos, YouTube playlists, YouTube channels. yt-dlp supports 1000+ sites — use in-app search to discover what works.
 
 ---
 
