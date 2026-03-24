@@ -111,6 +111,12 @@ class MpvPlayer:
     def cycle_pause(self):
         self._send(build_ipc_command("cycle", "pause"))
 
+    def playlist_next(self):
+        self._send(build_ipc_command("playlist-next"))
+
+    def playlist_prev(self):
+        self._send(build_ipc_command("playlist-prev"))
+
     def seek(self, seconds: int):
         self._send(build_ipc_command("seek", str(seconds)))
 

@@ -95,20 +95,34 @@ class StreamerOverlay(Gtk.Window):
         info_row.pack_end(self._time_label, False, False, 0)
         vbox.pack_start(info_row, False, False, 0)
 
-        # Row 2: channel strip (left) + playback controls (right)
+        # Row 2: channel strip (collapsible, left) + playback controls (right)
         mid_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
+        # Channel strip wrapped in a Revealer for collapse/expand
+        self._ch_revealer = Gtk.Revealer()
+        self._ch_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
+        self._ch_revealer.set_transition_duration(200)
+        self._ch_revealer.set_reveal_child(True)
         self._channel_strip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        mid_row.pack_start(self._channel_strip, True, True, 0)
+        self._ch_revealer.add(self._channel_strip)
+        mid_row.pack_start(self._ch_revealer, False, False, 0)
 
-        # Playback buttons — packed left-to-right in their own box
+        # Toggle button for channel strip
+        self._ch_toggle = Gtk.Button(label="≡")
+        self._ch_toggle.set_name("control-btn")
+        self._ch_toggle.connect("clicked", lambda _: self._toggle_channel_strip())
+        mid_row.pack_start(self._ch_toggle, False, False, 0)
+
+        # Playback buttons — order: ◀◀ ◀ −10 ▌▌ +10 ▶ ▶▶ M
         btn_defs = [
-            ("◀◀",  "prev-ch",    lambda _: self._change_channel(-1)),
-            ("−10", "seek-back",  lambda _: self._player.seek(-10)),
-            ("▌▌",  "play-pause", lambda _: self._toggle_pause()),
-            ("+10", "seek-fwd",   lambda _: self._player.seek(10)),
-            ("▶▶",  "next-ch",    lambda _: self._change_channel(1)),
-            ("M",   "mute",       lambda _: self._player.cycle_mute()),
+            ("◀◀",  "prev-ch",      lambda _: self._change_channel(-1)),
+            ("◀",   "playlist-prev", lambda _: self._player.playlist_prev()),
+            ("−10", "seek-back",    lambda _: self._player.seek(-10)),
+            ("▌▌",  "play-pause",   lambda _: self._toggle_pause()),
+            ("+10", "seek-fwd",     lambda _: self._player.seek(10)),
+            ("▶",   "playlist-next", lambda _: self._player.playlist_next()),
+            ("▶▶",  "next-ch",      lambda _: self._change_channel(1)),
+            ("M",   "mute",         lambda _: self._player.cycle_mute()),
         ]
         btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self._btn_play = None
@@ -310,6 +324,11 @@ class StreamerOverlay(Gtk.Window):
         self._paused = False
         if self._btn_play:
             self._btn_play.set_label("▌▌")
+
+    def _toggle_channel_strip(self):
+        visible = self._ch_revealer.get_reveal_child()
+        self._ch_revealer.set_reveal_child(not visible)
+        self._ch_toggle.set_label("≡" if not visible else "×")
 
     def _toggle_fullscreen(self):
         if self._fullscreen:
