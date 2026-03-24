@@ -1,0 +1,203 @@
+/* StreamerBox — Synthwave/Cyberpunk theme */
+
+* {
+    font-family: "Monospace", monospace;
+    color: #ff66ff;
+}
+
+window {
+    background-color: #050008;
+}
+
+/* Overlay container — bottom strip */
+#overlay-bar {
+    background-color: rgba(5, 0, 8, 0.88);
+    border-top: 1px solid #ff00ff;
+    padding: 8px 12px;
+}
+
+/* Now-playing label */
+#now-playing {
+    color: #ff00ff;
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+/* Progress/time label */
+#time-label {
+    color: #ff66ff;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* Channel button — inactive */
+#channel-btn {
+    background: none;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 0, 255, 0.2);
+    border-radius: 0;
+    box-shadow: none;
+    color: rgba(255, 102, 255, 0.35);
+    font-family: "Monospace", monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 10px;
+    min-height: 0;
+}
+
+#channel-btn:hover {
+    background-color: rgba(255, 0, 255, 0.06);
+    color: rgba(255, 102, 255, 0.7);
+    border-bottom-color: rgba(255, 0, 255, 0.5);
+}
+
+/* Channel button — active/current */
+#channel-btn.active {
+    border-bottom: 1px solid #ff00ff;
+    color: #ff66ff;
+}
+
+/* Hint bar — clickable shortcut buttons */
+#hint-btn {
+    background: none;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: rgba(255, 0, 255, 0.45);
+    font-family: "Monospace", monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 1px 4px;
+    min-height: 0;
+}
+
+#hint-btn:hover {
+    color: #ff66ff;
+    background-color: rgba(255, 0, 255, 0.07);
+}
+
+#hint-btn:active {
+    color: #ffffff;
+}
+
+#hint-sep {
+    color: rgba(255, 0, 255, 0.2);
+    font-size: 8px;
+}
+
+/* Search modal */
+#search-modal {
+    background-color: rgba(5, 0, 10, 0.96);
+    border: 1px solid #ff00ff;
+    padding: 16px 20px;
+    border-radius: 4px;
+}
+
+/* Search input */
+#search-entry {
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #ff00ff;
+    color: #ff66ff;
+    font-size: 14px;
+    caret-color: #ff00ff;
+    padding: 4px 0;
+}
+
+/* Search result row — normal */
+#result-row {
+    padding: 4px 6px;
+    color: rgba(255, 102, 255, 0.6);
+    font-size: 10px;
+    border-radius: 2px;
+}
+
+/* Search result row — selected */
+#result-row.selected {
+    background-color: rgba(255, 0, 255, 0.12);
+    color: #ff66ff;
+}
+
+/* Error / status message */
+#status-label {
+    color: #ff00ff;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+/* No-signal image container — image via CSS so it scales with the window */
+#nosignal-box {
+    background-color: #050008;
+    background-image: url("../assets/nosignal.png");
+    background-size: cover;
+    background-position: center;
+}
+
+/* Search page background */
+#search-page {
+    background-color: #050008;
+}
+
+/* mpv embed area */
+#mpv-area {
+    background-color: #000000;
+}
+
+/* Playback control buttons — flat, terminal-style */
+#control-btn {
+    background: none;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 0, 255, 0.35);
+    border-radius: 0;
+    box-shadow: none;
+    color: rgba(255, 102, 255, 0.7);
+    font-family: "Monospace", monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 1px 10px 2px 10px;
+    min-width: 0;
+    min-height: 0;
+}
+
+#control-btn:hover {
+    background-color: rgba(255, 0, 255, 0.07);
+    border-bottom-color: #ff00ff;
+    color: #ff00ff;
+}
+
+#control-btn:active {
+    background-color: rgba(255, 0, 255, 0.15);
+    color: #ffffff;
+}
+
+/* Search tab toggle buttons */
+#tab-btn {
+    background: none;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 0, 255, 0.25);
+    border-radius: 0;
+    box-shadow: none;
+    color: rgba(255, 102, 255, 0.4);
+    font-family: "Monospace", monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 16px;
+    min-height: 0;
+}
+
+#tab-btn:checked {
+    border-bottom: 1px solid #ff00ff;
+    color: #ff66ff;
+}
+
+#tab-btn:hover {
+    color: rgba(255, 102, 255, 0.7);
+}
