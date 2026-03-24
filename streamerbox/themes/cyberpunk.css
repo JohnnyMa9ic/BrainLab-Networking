@@ -89,6 +89,31 @@ window {
     font-size: 8px;
 }
 
+/* Danger buttons — REMOVE CH, QUIT */
+#hint-btn-danger {
+    background: none;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(255, 40, 40, 0.3);
+    color: rgba(255, 80, 80, 0.5);
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 1px 4px;
+    min-height: 0;
+}
+
+#hint-btn-danger:hover {
+    color: #ff4444;
+    background-color: rgba(255, 0, 0, 0.07);
+    border-bottom-color: #ff4444;
+}
+
+#hint-btn-danger:active {
+    color: #ffffff;
+}
+
 /* Search modal */
 #search-modal {
     background-color: rgba(5, 0, 10, 0.96);

@@ -137,21 +137,17 @@ class StreamerOverlay(Gtk.Window):
 
         vbox.pack_start(mid_row, False, False, 0)
 
-        # Row 3: clickable shortcut strip
+        # Row 3: action strip (left) + danger zone (right)
         hint_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        hint_row.set_halign(Gtk.Align.CENTER)
-        hint_defs = [
-            ("↑↓ CH",      lambda _: None),
-            ("←→ SEEK",    lambda _: None),
-            ("PAUSE",       lambda _: self._toggle_pause()),
-            ("STOP",        lambda _: self._stop_playback()),
-            ("SEARCH",      lambda _: self._open_search()),
-            ("MUTE",        lambda _: self._player.cycle_mute()),
-            ("FULLSCREEN",  lambda _: self._toggle_fullscreen()),
-            ("REMOVE CH",   lambda _: self._delete_current_channel()),
-            ("QUIT",        lambda _: self._on_quit()),
+
+        action_defs = [
+            ("SEARCH",     lambda _: self._open_search()),
+            ("PAUSE",      lambda _: self._toggle_pause()),
+            ("STOP",       lambda _: self._stop_playback()),
+            ("MUTE",       lambda _: self._player.cycle_mute()),
+            ("FULLSCREEN", lambda _: self._toggle_fullscreen()),
         ]
-        for i, (label, cb) in enumerate(hint_defs):
+        for i, (label, cb) in enumerate(action_defs):
             if i > 0:
                 sep = Gtk.Label(label=" · ")
                 sep.set_name("hint-sep")
@@ -160,6 +156,24 @@ class StreamerOverlay(Gtk.Window):
             btn.set_name("hint-btn")
             btn.connect("clicked", cb)
             hint_row.pack_start(btn, False, False, 0)
+
+        # Spacer pushes danger buttons to far right
+        hint_row.pack_start(Gtk.Label(label=""), True, True, 0)
+
+        danger_defs = [
+            ("REMOVE CH", lambda _: self._delete_current_channel()),
+            ("QUIT",      lambda _: self._on_quit()),
+        ]
+        for i, (label, cb) in enumerate(danger_defs):
+            if i > 0:
+                sep = Gtk.Label(label=" · ")
+                sep.set_name("hint-sep")
+                hint_row.pack_start(sep, False, False, 0)
+            btn = Gtk.Button(label=label)
+            btn.set_name("hint-btn-danger")
+            btn.connect("clicked", cb)
+            hint_row.pack_start(btn, False, False, 0)
+
         vbox.pack_start(hint_row, False, False, 0)
 
         return vbox
