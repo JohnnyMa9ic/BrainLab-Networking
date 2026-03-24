@@ -119,11 +119,11 @@ class StreamerOverlay(Gtk.Window):
         # Playback buttons — order: ◀◀ ⏮ −10 ▌▌/► +10 ⏭ ▶▶ M
         btn_defs = [
             ("◀◀",  "prev-ch",      lambda _: self._change_channel(-1)),
-            ("⏮",   "playlist-prev", lambda _: self._playlist_prev()),
+            ("|◀",  "playlist-prev", lambda _: self._playlist_prev()),
             ("−10", "seek-back",    lambda _: self._player.seek(-10)),
             ("▌▌",  "play-pause",   lambda _: self._toggle_pause()),
             ("+10", "seek-fwd",     lambda _: self._player.seek(10)),
-            ("⏭",   "playlist-next", lambda _: self._playlist_next()),
+            ("▶|",  "playlist-next", lambda _: self._playlist_next()),
             ("▶▶",  "next-ch",      lambda _: self._change_channel(1)),
             ("M",   "mute",         lambda _: self._player.cycle_mute()),
         ]
