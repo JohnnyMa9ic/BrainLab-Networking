@@ -100,7 +100,7 @@ class StreamerOverlay(Gtk.Window):
 
         # Channel strip wrapped in a Revealer for collapse/expand
         self._ch_revealer = Gtk.Revealer()
-        self._ch_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
+        self._ch_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_LEFT)
         self._ch_revealer.set_transition_duration(200)
         self._ch_revealer.set_reveal_child(True)
         self._channel_strip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
