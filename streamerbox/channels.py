@@ -26,6 +26,9 @@ class ChannelManager:
             return data.get("channels") or []
         except FileNotFoundError:
             return []
+        except yaml.YAMLError as e:
+            print(f"WARNING: could not parse {path}: {e}")
+            return []
 
     def _reload(self):
         base = [Channel(**c) for c in self._load_yaml(self._channels_path)]
@@ -52,6 +55,7 @@ class ChannelManager:
         return True
 
     def save_channel(self, name: str, url: str):
+        os.makedirs(os.path.dirname(self._saved_path), exist_ok=True)
         existing_urls = {ch.url for ch in self.channels}
         if url in existing_urls:
             return

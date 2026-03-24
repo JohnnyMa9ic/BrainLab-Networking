@@ -33,7 +33,7 @@ def parse_ytdlp_result(line: str) -> Optional[SearchResult]:
 
 def _run_ytdlp(cmd: list[str]) -> tuple[list[SearchResult], str]:
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         return [], "TIMEOUT — search took too long"
     except OSError as e:
@@ -43,7 +43,7 @@ def _run_ytdlp(cmd: list[str]) -> tuple[list[SearchResult], str]:
         stderr = result.stderr.strip()
         if is_auth_error(stderr):
             return [], "AUTH REQUIRED — run: yt-dlp --cookies-from-browser firefox --cookies ~/.config/streamerbox/cookies.txt --skip-download https://www.youtube.com"
-        return [], f"PLAYBACK ERROR — {stderr[:80]}"
+        return [], f"PLAYBACK ERROR — {stderr[:200]}"
 
     results = []
     for line in result.stdout.strip().splitlines():

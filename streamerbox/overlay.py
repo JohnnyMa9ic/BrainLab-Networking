@@ -25,10 +25,12 @@ class StreamerOverlay(Gtk.Window):
         self._paused = False
         self._fullscreen = False
         self._playlist_pos_times = []
+        self._searching = False
 
         self._apply_css()
         self._build_window()
         self._connect_keys()
+        self.connect("window-state-event", self._on_window_state)
 
     def _apply_css(self):
         provider = Gtk.CssProvider()
@@ -278,10 +280,14 @@ class StreamerOverlay(Gtk.Window):
         if entry_focused:
             return False
         if key == "Up":
+            if not self._search_results:
+                return False
             self._search_selected = max(0, self._search_selected - 1)
             self._update_result_selection()
             return True
         if key == "Down":
+            if not self._search_results:
+                return False
             self._search_selected = min(len(self._search_results) - 1, self._search_selected + 1)
             self._update_result_selection()
             return True
@@ -310,7 +316,9 @@ class StreamerOverlay(Gtk.Window):
             self.unfullscreen()
         else:
             self.fullscreen()
-        self._fullscreen = not self._fullscreen
+
+    def _on_window_state(self, window, event):
+        self._fullscreen = bool(event.new_window_state & Gdk.WindowState.FULLSCREEN)
 
     def _delete_current_channel(self):
         ch = self._channels.get(self._current_idx)
@@ -351,6 +359,8 @@ class StreamerOverlay(Gtk.Window):
             self._refresh_channel_strip()
 
     def _open_search(self):
+        if self._stack.get_visible_child_name() == "search":
+            return
         self._search_results = []
         self._search_selected = 0
         self._search_entry.set_text("")
@@ -367,9 +377,12 @@ class StreamerOverlay(Gtk.Window):
         self.grab_focus()
 
     def _on_search_submit(self, entry):
+        if self._searching:
+            return
         query = entry.get_text().strip()
         if not query:
             return
+        self._searching = True
         self._search_status.set_text("SEARCHING...")
         self._clear_results()
         mode = self._search_mode
@@ -382,6 +395,7 @@ class StreamerOverlay(Gtk.Window):
         threading.Thread(target=_run, daemon=True).start()
 
     def _on_search_done(self, results, error):
+        self._searching = False
         self._search_results = results
         self._search_selected = 0
         self._clear_results()
@@ -468,11 +482,15 @@ class StreamerOverlay(Gtk.Window):
 
     def _auto_update_ytdlp(self):
         import subprocess
-        result = subprocess.run(
-            ["/usr/local/bin/yt-dlp", "-U"],
-            capture_output=True, text=True
-        )
-        if result.returncode == 0:
+        try:
+            result = subprocess.run(
+                ["/usr/local/bin/yt-dlp", "-U"],
+                capture_output=True, text=True, timeout=30
+            )
+            success = result.returncode == 0
+        except subprocess.TimeoutExpired:
+            success = False
+        if success:
             GLib.idle_add(self._after_ytdlp_update)
         else:
             GLib.idle_add(
@@ -483,13 +501,17 @@ class StreamerOverlay(Gtk.Window):
     def _after_ytdlp_update(self):
         self._now_playing.set_text("✦ yt-dlp updated — restarting stream…")
         ch = self._channels.get(self._current_idx)
-        if ch:
-            self._player.restart(ch.url)
+        if not ch:
+            return False
+        self._player.restart(ch.url)
         return False
 
     def _on_idle(self):
         if self._stack.get_visible_child_name() != "search":
             self._stack.set_visible_child_name("nosignal")
+        self._paused = False
+        if self._btn_play:
+            self._btn_play.set_label("▌▌")
         return False
 
     def _on_playing(self):

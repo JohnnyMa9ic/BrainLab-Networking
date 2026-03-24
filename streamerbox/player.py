@@ -73,6 +73,7 @@ class MpvPlayer:
         try:
             self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self._sock.connect(self._sock_path)
+            self._sock.settimeout(2.0)
             for i, prop in enumerate(self.OBSERVED):
                 self._send(build_ipc_command("observe_property", i + 1, prop))
             buf = ""
@@ -90,6 +91,8 @@ class MpvPlayer:
                                 self._on_event(event)
                             except json.JSONDecodeError:
                                 pass
+                except socket.timeout:
+                    continue
                 except OSError:
                     break
         except OSError:
@@ -149,7 +152,9 @@ class MpvPlayer:
     def restart(self, url: str):
         self.stop()
         self._window_id = None
-        time.sleep(0.5)
+        deadline = time.time() + 3.0
+        while os.path.exists(self._sock_path) and time.time() < deadline:
+            time.sleep(0.1)
         self.start(url, wid=self._wid)
 
     def stop(self):
