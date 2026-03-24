@@ -99,19 +99,19 @@ class StreamerOverlay(Gtk.Window):
         mid_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
         # Channel strip wrapped in a Revealer for collapse/expand
+        # Toggle button sits on the far left
+        self._ch_toggle = Gtk.Button(label="≡")
+        self._ch_toggle.set_name("control-btn")
+        self._ch_toggle.connect("clicked", lambda _: self._toggle_channel_strip())
+        mid_row.pack_start(self._ch_toggle, False, False, 0)
+
         self._ch_revealer = Gtk.Revealer()
-        self._ch_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_LEFT)
+        self._ch_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
         self._ch_revealer.set_transition_duration(200)
         self._ch_revealer.set_reveal_child(True)
         self._channel_strip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self._ch_revealer.add(self._channel_strip)
         mid_row.pack_start(self._ch_revealer, False, False, 0)
-
-        # Toggle button for channel strip
-        self._ch_toggle = Gtk.Button(label="≡")
-        self._ch_toggle.set_name("control-btn")
-        self._ch_toggle.connect("clicked", lambda _: self._toggle_channel_strip())
-        mid_row.pack_start(self._ch_toggle, False, False, 0)
 
         # Playback buttons — order: ◀◀ ◀ −10 ▌▌ +10 ▶ ▶▶ M
         btn_defs = [
