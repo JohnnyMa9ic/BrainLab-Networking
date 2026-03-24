@@ -116,14 +116,14 @@ class StreamerOverlay(Gtk.Window):
         self._ch_revealer.add(self._channel_strip)
         mid_row.pack_start(self._ch_revealer, False, False, 0)
 
-        # Playback buttons — order: ◀◀ ◀ −10 ▌▌ +10 ▶ ▶▶ M
+        # Playback buttons — order: ◀◀ ⏮ −10 ▌▌/► +10 ⏭ ▶▶ M
         btn_defs = [
             ("◀◀",  "prev-ch",      lambda _: self._change_channel(-1)),
-            ("◀",   "playlist-prev", lambda _: self._playlist_prev()),
+            ("⏮",   "playlist-prev", lambda _: self._playlist_prev()),
             ("−10", "seek-back",    lambda _: self._player.seek(-10)),
             ("▌▌",  "play-pause",   lambda _: self._toggle_pause()),
             ("+10", "seek-fwd",     lambda _: self._player.seek(10)),
-            ("▶",   "playlist-next", lambda _: self._playlist_next()),
+            ("⏭",   "playlist-next", lambda _: self._playlist_next()),
             ("▶▶",  "next-ch",      lambda _: self._change_channel(1)),
             ("M",   "mute",         lambda _: self._player.cycle_mute()),
         ]
@@ -375,7 +375,7 @@ class StreamerOverlay(Gtk.Window):
         self._player.cycle_pause()
         self._paused = not self._paused
         if self._btn_play:
-            self._btn_play.set_label("▶" if self._paused else "▌▌")
+            self._btn_play.set_label("►" if self._paused else "▌▌")
 
     def _playlist_next(self):
         self._user_nav_time = time.time()
