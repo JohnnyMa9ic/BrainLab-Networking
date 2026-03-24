@@ -14,7 +14,9 @@ Machine: **Thought-Reliquary** (Ubuntu 24.04, `192.168.4.100`)
 - Package: `x11vnc`
 - Port: `5900`
 - Password stored at: `~/.vnc/passwd`
-- Autostart configured at: `~/.config/autostart/x11vnc.desktop`
+- Autostart: systemd user service at `~/.config/systemd/user/x11vnc.service`
+- Linger enabled (`loginctl enable-linger johnny`) — survives session cycles
+- Service survives SSH session close; restarts automatically if it crashes
 - Requires X11 session (see note below)
 - Connect from Mac: **TigerVNC** → `192.168.4.100` (no port suffix)
 
@@ -46,10 +48,11 @@ sudo reboot
 ```
 
 ## x11vnc After Session Switch
-x11vnc autostart fires on GNOME login. If VNC is unreachable after a session switch,
-SSH in and start it manually:
+x11vnc runs as a systemd user service and restarts automatically. If VNC is unreachable
+after a session switch, SSH in and restart the service:
 ```bash
-x11vnc -display :0 -auth guess -forever -rfbauth ~/.vnc/passwd -rfbport 5900 -shared &
+systemctl --user restart x11vnc.service
+systemctl --user status x11vnc.service
 ```
 
 ## Firewall Rules
@@ -97,7 +100,7 @@ alias unflip='xrandr --output $(xrandr | grep " connected" | awk "{print \$1}") 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| TigerVNC "Connection refused" | x11vnc not running | SSH in, start x11vnc manually |
+| TigerVNC "Connection refused" | x11vnc not running | `ssh johnny@192.168.4.100` → `systemctl --user restart x11vnc` |
 | TigerVNC "No route to host" | Two VNC clients open simultaneously | Close macOS Screen Sharing before connecting TigerVNC |
 | Boots into XFCE | XFCE became default session | Logout → choose Ubuntu at GDM gear icon |
 | No gear icon at GDM | Click username first | Gear appears after clicking username, before password |
