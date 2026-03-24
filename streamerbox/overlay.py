@@ -1,4 +1,5 @@
 import os
+import time
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -23,6 +24,7 @@ class StreamerOverlay(Gtk.Window):
         self._state = {"time_pos": 0, "duration": 0, "title": "", "idle": True}
         self._paused = False
         self._fullscreen = False
+        self._playlist_pos_times = []
 
         self._apply_css()
         self._build_window()
@@ -443,12 +445,25 @@ class StreamerOverlay(Gtk.Window):
             elif name == "media-title" and data:
                 self._state["title"] = data
                 GLib.idle_add(self._update_now_playing, data)
+            elif name == "playlist-pos" and data is not None:
+                now = time.time()
+                self._playlist_pos_times.append(now)
+                self._playlist_pos_times = [t for t in self._playlist_pos_times if now - t < 5]
+                if len(self._playlist_pos_times) >= 5:
+                    self._playlist_pos_times = []
+                    GLib.idle_add(self._on_playlist_stall)
             elif name == "idle-active":
                 self._state["idle"] = bool(data)
                 if data:
                     GLib.idle_add(self._on_idle)
                 else:
                     GLib.idle_add(self._on_playing)
+
+    def _on_playlist_stall(self):
+        self._player.stop_playback()
+        self._now_playing.set_text("✦ STREAM ERROR — update yt-dlp and retry")
+        self._stack.set_visible_child_name("nosignal")
+        return False
 
     def _on_idle(self):
         if self._stack.get_visible_child_name() != "search":

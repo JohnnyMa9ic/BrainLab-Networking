@@ -17,7 +17,7 @@ def build_mpv_args(ipc_sock: str, cookies: str, wid: Optional[int] = None) -> li
         f"--input-ipc-server={ipc_sock}",
         "--script-opts=ytdl_hook-ytdl_path=/usr/local/bin/yt-dlp",
         "--ytdl-format=bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-        f"--ytdl-raw-options=cookies={cookies}",
+        f"--ytdl-raw-options=cookies={cookies},retries=3",
         "--cache=yes",
         "--demuxer-max-bytes=150MiB",
         "--loop-playlist=inf",
