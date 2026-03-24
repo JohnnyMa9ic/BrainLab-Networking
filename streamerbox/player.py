@@ -33,7 +33,7 @@ def build_ipc_command(*args) -> str:
 
 
 class MpvPlayer:
-    OBSERVED = ["time-pos", "duration", "media-title", "playlist-pos", "idle-active"]
+    OBSERVED = ["time-pos", "duration", "media-title", "playlist-pos", "playlist-count", "idle-active"]
 
     def __init__(self, on_event: Optional[Callable] = None):
         home = os.path.expanduser("~")
@@ -116,6 +116,9 @@ class MpvPlayer:
 
     def playlist_prev(self):
         self._send(build_ipc_command("playlist-prev"))
+
+    def goto_playlist_index(self, idx: int):
+        self._send(build_ipc_command("set_property", "playlist-pos", idx))
 
     def seek(self, seconds: int):
         self._send(build_ipc_command("seek", str(seconds)))
