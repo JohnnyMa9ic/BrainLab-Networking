@@ -26,6 +26,9 @@ class StreamerOverlay(Gtk.Window):
         self._fullscreen = False
         self._playlist_pos_times = []
         self._searching = False
+        self._playlist_pos = 0
+        self._playlist_count = 0
+        self._user_nav_time = 0.0
 
         self._apply_css()
         self._build_window()
@@ -116,11 +119,11 @@ class StreamerOverlay(Gtk.Window):
         # Playback buttons — order: ◀◀ ◀ −10 ▌▌ +10 ▶ ▶▶ M
         btn_defs = [
             ("◀◀",  "prev-ch",      lambda _: self._change_channel(-1)),
-            ("◀",   "playlist-prev", lambda _: self._player.playlist_prev()),
+            ("◀",   "playlist-prev", lambda _: self._playlist_prev()),
             ("−10", "seek-back",    lambda _: self._player.seek(-10)),
             ("▌▌",  "play-pause",   lambda _: self._toggle_pause()),
             ("+10", "seek-fwd",     lambda _: self._player.seek(10)),
-            ("▶",   "playlist-next", lambda _: self._player.playlist_next()),
+            ("▶",   "playlist-next", lambda _: self._playlist_next()),
             ("▶▶",  "next-ch",      lambda _: self._change_channel(1)),
             ("M",   "mute",         lambda _: self._player.cycle_mute()),
         ]
@@ -374,7 +377,23 @@ class StreamerOverlay(Gtk.Window):
         if self._btn_play:
             self._btn_play.set_label("▶" if self._paused else "▌▌")
 
+    def _playlist_next(self):
+        self._user_nav_time = time.time()
+        if self._playlist_count > 1:
+            self._player.goto_playlist_index((self._playlist_pos + 1) % self._playlist_count)
+        else:
+            self._player.playlist_next()
+
+    def _playlist_prev(self):
+        self._user_nav_time = time.time()
+        if self._playlist_count > 1:
+            self._player.goto_playlist_index((self._playlist_pos - 1) % self._playlist_count)
+        else:
+            self._player.playlist_prev()
+
     def _change_channel(self, delta: int):
+        self._playlist_pos = 0
+        self._playlist_count = 0
         new_idx = (self._current_idx + delta) % self._channels.count()
         self._current_idx = new_idx
         ch = self._channels.get(self._current_idx)
@@ -493,12 +512,17 @@ class StreamerOverlay(Gtk.Window):
                 self._state["title"] = data
                 GLib.idle_add(self._update_now_playing, data)
             elif name == "playlist-pos" and data is not None:
+                if data >= 0:
+                    self._playlist_pos = int(data)
                 now = time.time()
-                self._playlist_pos_times.append(now)
-                self._playlist_pos_times = [t for t in self._playlist_pos_times if now - t < 5]
-                if len(self._playlist_pos_times) >= 5:
-                    self._playlist_pos_times = []
-                    GLib.idle_add(self._on_playlist_stall)
+                if now - self._user_nav_time >= 3:
+                    self._playlist_pos_times.append(now)
+                    self._playlist_pos_times = [t for t in self._playlist_pos_times if now - t < 5]
+                    if len(self._playlist_pos_times) >= 5:
+                        self._playlist_pos_times = []
+                        GLib.idle_add(self._on_playlist_stall)
+            elif name == "playlist-count" and data is not None:
+                self._playlist_count = int(data)
             elif name == "idle-active":
                 self._state["idle"] = bool(data)
                 if data:
