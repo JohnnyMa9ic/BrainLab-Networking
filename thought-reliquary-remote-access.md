@@ -31,6 +31,10 @@ Machine: **Thought-Reliquary** (Ubuntu 24.04, `192.168.4.100`)
 Wayland is disabled on this machine so x11vnc works correctly.
 Setting: `/etc/gdm3/custom.conf` → `WaylandEnable=false`
 
+## Important: Display is :1, Not :0
+GDM occupies display `:0`. The GNOME user session runs on `:1`.
+The x11vnc service is configured for `-display :1` and `XAUTHORITY=/run/user/1000/gdm/Xauthority`.
+
 ## Important: GNOME is the Correct Session
 XFCE was installed during xrdp testing and may appear as a session option at GDM.
 Always select **Ubuntu (GNOME)** at login — not XFCE.
