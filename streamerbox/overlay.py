@@ -461,8 +461,30 @@ class StreamerOverlay(Gtk.Window):
 
     def _on_playlist_stall(self):
         self._player.stop_playback()
-        self._now_playing.set_text("✦ STREAM ERROR — update yt-dlp and retry")
         self._stack.set_visible_child_name("nosignal")
+        self._now_playing.set_text("✦ UPDATING yt-dlp…")
+        threading.Thread(target=self._auto_update_ytdlp, daemon=True).start()
+        return False
+
+    def _auto_update_ytdlp(self):
+        import subprocess
+        result = subprocess.run(
+            ["/usr/local/bin/yt-dlp", "-U"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            GLib.idle_add(self._after_ytdlp_update)
+        else:
+            GLib.idle_add(
+                self._now_playing.set_text,
+                "✦ UPDATE FAILED — check connection and retry manually"
+            )
+
+    def _after_ytdlp_update(self):
+        self._now_playing.set_text("✦ yt-dlp updated — restarting stream…")
+        ch = self._channels.get(self._current_idx)
+        if ch:
+            self._player.restart(ch.url)
         return False
 
     def _on_idle(self):
