@@ -94,6 +94,19 @@ output_name = \\.\DISPLAY6
 - **Cause:** Moonlight not in fullscreen mode
 - **Fix:** Press Cmd+Enter in Moonlight, or enable fullscreen in settings
 
+### Issue 8: Moonlight shows Victus as offline after hardwiring Victus to network
+- **Symptom:** Moonlight on Mac Mini reports Victus offline despite device being powered on
+- **Cause:** Two separate issues:
+  1. mDNS/multicast doesn't bridge between wired (192.168.5.x) and WiFi (192.168.4.x) subnets
+  2. Windows assigned the new Ethernet connection as a **Public network**, which blocks all
+     inbound connections by default — Sunshine's ports were silently dropped
+- **Fix:**
+  1. Set Moonlight manual address to `192.168.5.85` via plist:
+     `defaults write com.moonlight-stream.Moonlight "hosts.1.manualaddress" "192.168.5.85"`
+  2. On Victus: change Ethernet network profile from **Public → Private**
+     (Settings → Network & Internet → Ethernet → toggle "Make this PC discoverable")
+- **Note:** This only needs to be done once — Windows remembers the profile per network
+
 ---
 
 ## Virtual Display Driver (VDD) — Not Used in Final Config
