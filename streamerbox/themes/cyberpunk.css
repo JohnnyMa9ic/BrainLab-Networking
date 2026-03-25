@@ -159,7 +159,7 @@ window {
     background-color: #050008;
     background-image: url("../assets/nosignal.png");
     background-size: cover;
-    background-position: center;
+    background-position: center top;
 }
 
 /* Search page background */
