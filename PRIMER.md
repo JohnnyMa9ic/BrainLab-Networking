@@ -1,4 +1,4 @@
-# BrainLab Session Primer — 2026-03-24
+# BrainLab Session Primer — 2026-03-29
 
 Pick up here in the next session.
 
@@ -40,7 +40,17 @@ Linger enabled (`loginctl enable-linger johnny`) — services survive session cy
 - **App:** `~/Applications/Reliquary VNC.app` (pinned to Dock, Spotlight: "Reliquary VNC")
 - **Password file:** `~/.vnc/passwd_reliquary` (copied from Linux, auto-used by app)
 - **No password prompt** — launches and connects directly
-- If VNC stops working: `ssh johnny@192.168.4.100` → `systemctl --user restart x11vnc`
+- If VNC stops working: SSH in → `systemctl --user restart x11vnc`
+
+---
+
+## SSH from Mac to Reliquary
+
+Passwordless SSH is configured — Claude Code can SSH and SCP directly without user involvement:
+```bash
+ssh johnny@192.168.4.100 'command here'
+scp /local/file johnny@192.168.4.100:/remote/path
+```
 
 ---
 
@@ -58,6 +68,7 @@ A CRT-styled ambient anime/YouTube player. Runs as a systemd user service.
 | `~/BrainLab-Networking/streamerbox/` | Source code (symlinked to `~/streamerbox/`) |
 | `~/.config/streamerbox/channels.yaml` | Channel list — add/edit playlist URLs here |
 | `~/.config/streamerbox/cookies.txt` | YouTube Premium + Crunchyroll cookies |
+| `~/BrainLab-Networking/streamerbox/assets/nosignal.png` | Standby screen — currently Lithium Dreams v3 (Gemini, magenta CRT + bonsai/skull) |
 
 ### Button layout
 ```
@@ -69,28 +80,11 @@ A CRT-styled ambient anime/YouTube player. Runs as a systemd user service.
 - `−10` / `+10` — seek 10 seconds
 - `M` — mute
 
-### Playlist navigation
-Uses explicit `playlist-pos` index tracking via mpv IPC. Stall detector suppressed during user navigation (`_user_nav_time` flag, 3s window).
-
 ### Re-export cookies (when they expire, every few months)
 ```bash
 yt-dlp --cookies-from-browser firefox \
        --cookies ~/.config/streamerbox/cookies.txt \
        --skip-download "https://www.youtube.com"
-```
-
----
-
-## BrainLab-Networking Repo State
-
-```
-git log --oneline -5
-
-47a3068 Fix playlist nav icons: use |◀ and ▶| instead of ⏮/⏭
-b873ee0 Fix icon confusion: ⏮/⏭ for playlist nav, ► for play (not ▶)
-8ec39a7 Fix playlist navigation: track position explicitly, suppress stall on user nav
-bf35520 Fix x11vnc display: :0 → :1; document GDM display layout
-24d96b5 Fix x11vnc: replace autostart .desktop with systemd user service
 ```
 
 ---
@@ -101,3 +95,4 @@ bf35520 Fix x11vnc display: :0 → :1; document GDM display layout
 - TigerVNC connects without password prompt ✓
 - Playlist track navigation (|◀/▶|) works correctly ✓
 - Channel switching (◀◀/▶▶) works correctly ✓
+- Standby screen: Lithium Dreams v3 (magenta CRT, bonsai + skull wireframes) ✓
