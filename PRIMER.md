@@ -1,4 +1,4 @@
-# BrainLab Session Primer — 2026-04-11
+# BrainLab Session Primer — 2026-04-11 (updated)
 
 Pick up here in the next session.
 
@@ -12,6 +12,8 @@ Pick up here in the next session.
   - `unflip` alias = `xrandr --rotate inverted` (visually correct)
   - `flip` alias = `xrandr --rotate normal` (tablet mode)
 - mpv + yt-dlp installed, configured at `~/.config/mpv/mpv.conf`
+- Node.js 20.20.2 + npm 10.8.2 installed via NodeSource repo (replaced snap node 18)
+- Codex CLI 0.120.0 installed globally (`sudo npm install -g @openai/codex`), authenticated
 
 ---
 
@@ -121,3 +123,6 @@ Supporting files on this machine:
 - Claude Code session protocol (auto-PRIMER fetch + closing handshake) ✓
 - StreamerBox: ADD CH button (dialog with name+URL), fullscreen hides bar + floating exit button ✓
 - Clipboard sync via VNC works (x11vnc default, no extra flags needed) ✓
+- OpenAI Codex plugin installed in Claude Code ✓ (`claude plugin marketplace add openai/codex-plugin-cc` + `claude plugin install codex@openai-codex`)
+  - Note: `/plugin` is a CLI subcommand (`claude plugin ...`), NOT a chat slash command
+  - Commands available after restart: `/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, `/codex:status`, `/codex:result`, `/codex:cancel`
