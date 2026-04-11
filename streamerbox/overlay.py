@@ -30,6 +30,9 @@ class StreamerOverlay(Gtk.Window):
         self._playlist_pos = 0
         self._playlist_count = 0
         self._user_nav_time = 0.0
+        self._playing_search_result = False
+        self._stall_recovery_lock = threading.Lock()
+        self._stall_recovery_active = False
 
         self._apply_css()
         self._build_window()
@@ -237,6 +240,7 @@ class StreamerOverlay(Gtk.Window):
         scroll.set_min_content_height(400)
         scroll.set_max_content_height(600)
         self._results_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self._results_box.set_can_focus(True)
         scroll.add(self._results_box)
         inner.pack_start(scroll, True, True, 0)
 
@@ -245,7 +249,7 @@ class StreamerOverlay(Gtk.Window):
         self._search_status.set_halign(Gtk.Align.CENTER)
         inner.pack_start(self._search_status, False, False, 0)
 
-        hint = Gtk.Label(label="ENTER search  ·  ↑↓ select  ·  ENTER play  ·  S save  ·  ESC back")
+        hint = Gtk.Label(label="ENTER search  ·  ↑↓ select  ·  ENTER play  ·  S search  ·  ESC back")
         hint.set_name("hint-bar")
         inner.pack_start(hint, False, False, 8)
 
@@ -285,7 +289,7 @@ class StreamerOverlay(Gtk.Window):
             self._on_quit()
             return True
         if key in ("1","2","3","4","5","6","7","8","9"):
-            self._jump_to_channel(int(key) - 1)
+            self._jump_to_channel_id(int(key))
             return True
         if key == "space":
             self._toggle_pause()
@@ -311,6 +315,9 @@ class StreamerOverlay(Gtk.Window):
         if key == "F11":
             self._toggle_fullscreen()
             return True
+        if key == "h":
+            self._toggle_bar()
+            return True
         if key == "x":
             self._stop_playback()
             return True
@@ -323,7 +330,11 @@ class StreamerOverlay(Gtk.Window):
         if key == "Escape":
             self._close_search()
             return True
-        # Let the entry handle all typing; only intercept nav/action keys when entry is not focused
+        if key == "s" and not entry_focused:
+            self._focus_search_entry()
+            return True
+        # Let the entry handle text input and Enter-to-search; list navigation only applies
+        # after focus has moved onto the result list.
         if entry_focused:
             return False
         if key == "Up":
@@ -338,17 +349,8 @@ class StreamerOverlay(Gtk.Window):
             self._search_selected = min(len(self._search_results) - 1, self._search_selected + 1)
             self._update_result_selection()
             return True
-        if key == "s" and self._search_results:
-            r = self._search_results[self._search_selected]
-            self._channels.save_channel(r.name, r.url)
-            self._search_status.set_text(f"SAVED: {r.name}")
-            self._refresh_channel_strip()
-            return True
         if key == "Return" and self._search_results:
-            r = self._search_results[self._search_selected]
-            self._player.load(r.url)
-            self._update_now_playing(r.name)
-            self._close_search()
+            self._play_search_result(self._search_selected)
             return True
         return False
 
@@ -362,6 +364,13 @@ class StreamerOverlay(Gtk.Window):
         visible = self._ch_revealer.get_reveal_child()
         self._ch_revealer.set_reveal_child(not visible)
         self._ch_toggle.set_label("≡" if not visible else "×")
+
+    def _toggle_bar(self):
+        if self._bar:
+            if self._bar.get_visible():
+                self._bar.hide()
+            else:
+                self._bar.show()
 
     def _toggle_fullscreen(self):
         if self._fullscreen:
@@ -386,11 +395,15 @@ class StreamerOverlay(Gtk.Window):
         removed = self._channels.remove_channel(ch.url)
         if removed:
             self._current_idx = max(0, self._current_idx - 1)
+            self._playing_search_result = False
             self._refresh_channel_strip()
             next_ch = self._channels.get(self._current_idx)
             if next_ch:
                 self._player.load(next_ch.url)
                 self._update_now_playing(next_ch.name)
+            else:
+                self._player.stop_playback()
+                self._now_playing.set_text("✦ NO SIGNAL")
         else:
             self._now_playing.set_text("✦ BASE CHANNELS CANNOT BE REMOVED")
 
@@ -432,18 +445,24 @@ class StreamerOverlay(Gtk.Window):
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK and name and url:
-            self._channels.save_channel(name, url)
-            self._refresh_channel_strip()
-            self._now_playing.set_text(f"✦ ADDED: {name.upper()}")
+            status = self._channels.save_channel(name, url)
+            if status == self._channels.STATUS_ADDED:
+                self._refresh_channel_strip()
+                self._now_playing.set_text(f"✦ ADDED: {name.upper()}")
+            elif status == self._channels.STATUS_ALREADY_EXISTS:
+                self._now_playing.set_text(f"✦ ALREADY SAVED: {name.upper()}")
 
     def _toggle_pause(self):
         self._player.cycle_pause()
-        self._paused = not self._paused
+        paused = self._player.get_pause_state()
+        if paused is not None:
+            self._paused = paused
         if self._btn_play:
             self._btn_play.set_label("►" if self._paused else "▌▌")
 
     def _playlist_next(self):
         self._user_nav_time = time.time()
+        self._playlist_pos_times = []
         if self._playlist_count > 1:
             self._player.goto_playlist_index((self._playlist_pos + 1) % self._playlist_count)
         else:
@@ -451,12 +470,16 @@ class StreamerOverlay(Gtk.Window):
 
     def _playlist_prev(self):
         self._user_nav_time = time.time()
+        self._playlist_pos_times = []
         if self._playlist_count > 1:
             self._player.goto_playlist_index((self._playlist_pos - 1) % self._playlist_count)
         else:
             self._player.playlist_prev()
 
     def _change_channel(self, delta: int):
+        if self._channels.count() == 0:
+            return
+        self._playing_search_result = False
         self._playlist_pos = 0
         self._playlist_count = 0
         new_idx = (self._current_idx + delta) % self._channels.count()
@@ -469,11 +492,20 @@ class StreamerOverlay(Gtk.Window):
 
     def _jump_to_channel(self, idx: int):
         if self._channels.get(idx):
+            self._playing_search_result = False
             self._current_idx = idx
             ch = self._channels.get(idx)
             self._player.load(ch.url)
             self._update_now_playing(ch.name)
             self._refresh_channel_strip()
+
+    def _jump_to_channel_id(self, channel_id: int):
+        # Keep numeric shortcuts aligned with the IDs displayed in the channel strip,
+        # even when YAML IDs are sparse or saved channels have been deleted.
+        for idx, ch in enumerate(self._channels.channels):
+            if ch.id == channel_id:
+                self._jump_to_channel(idx)
+                return
 
     def _open_search(self):
         if self._stack.get_visible_child_name() == "search":
@@ -518,20 +550,35 @@ class StreamerOverlay(Gtk.Window):
         self._clear_results()
         if error:
             self._search_status.set_text(error)
+            self._focus_search_entry()
         else:
             self._search_status.set_text(f"{len(results)} results")
-            for r in results:
-                lbl = Gtk.Label(label=f"▶ {r.name}")
-                lbl.set_name("result-row")
-                lbl.set_halign(Gtk.Align.START)
-                self._results_box.pack_start(lbl, False, False, 0)
+            for i, r in enumerate(results):
+                row = Gtk.Button(label=f"▶ {r.name}")
+                row.set_name("result-row")
+                row.set_halign(Gtk.Align.FILL)
+                row.set_hexpand(True)
+                row.set_relief(Gtk.ReliefStyle.NONE)
+                row.connect("clicked", lambda _, idx=i: self._play_search_result(idx))
+                self._results_box.pack_start(row, False, False, 0)
             self._update_result_selection()
             self._results_box.show_all()
+            if results:
+                self._focus_search_results()
+            else:
+                self._focus_search_entry()
         return False
 
     def _clear_results(self):
         for child in self._results_box.get_children():
             self._results_box.remove(child)
+
+    def _focus_search_entry(self):
+        self._search_entry.grab_focus()
+        self._search_entry.set_position(-1)
+
+    def _focus_search_results(self):
+        self._results_box.grab_focus()
 
     def _update_result_selection(self):
         for i, child in enumerate(self._results_box.get_children()):
@@ -540,6 +587,17 @@ class StreamerOverlay(Gtk.Window):
                 ctx.add_class("selected")
             else:
                 ctx.remove_class("selected")
+
+    def _play_search_result(self, idx: int):
+        if 0 <= idx < len(self._search_results):
+            self._search_selected = idx
+            self._update_result_selection()
+            r = self._search_results[idx]
+            self._playing_search_result = True
+            self._player.load(r.url)
+            self._state["title"] = r.name
+            self._now_playing.set_text(f"✦ SEARCH — {r.name.upper()[:40]}")
+            self._close_search()
 
     def _refresh_channel_strip(self):
         for child in self._channel_strip.get_children():
@@ -560,6 +618,9 @@ class StreamerOverlay(Gtk.Window):
         self._channel_strip.show_all()
 
     def _update_now_playing(self, title: str):
+        if self._playing_search_result:
+            self._now_playing.set_text(f"✦ SEARCH — {title.upper()[:40]}")
+            return
         ch = self._channels.get(self._current_idx)
         ch_num = ch.id if ch else 0
         self._now_playing.set_text(f"✦ CH {ch_num:02d} — {title.upper()[:40]}")
@@ -596,6 +657,10 @@ class StreamerOverlay(Gtk.Window):
                     GLib.idle_add(self._on_playing)
 
     def _on_playlist_stall(self):
+        with self._stall_recovery_lock:
+            if self._stall_recovery_active:
+                return False
+            self._stall_recovery_active = True
         self._player.stop_playback()
         self._stack.set_visible_child_name("nosignal")
         self._now_playing.set_text("✦ UPDATING yt-dlp…")
@@ -604,9 +669,11 @@ class StreamerOverlay(Gtk.Window):
 
     def _auto_update_ytdlp(self):
         import subprocess
+        import shutil
+        ytdlp = shutil.which("yt-dlp") or "/usr/local/bin/yt-dlp"
         try:
             result = subprocess.run(
-                ["/usr/local/bin/yt-dlp", "-U"],
+                [ytdlp, "-U"],
                 capture_output=True, text=True, timeout=30
             )
             success = result.returncode == 0
@@ -615,12 +682,11 @@ class StreamerOverlay(Gtk.Window):
         if success:
             GLib.idle_add(self._after_ytdlp_update)
         else:
-            GLib.idle_add(
-                self._now_playing.set_text,
-                "✦ UPDATE FAILED — check connection and retry manually"
-            )
+            GLib.idle_add(self._on_stall_update_failed)
 
     def _after_ytdlp_update(self):
+        with self._stall_recovery_lock:
+            self._stall_recovery_active = False
         self._now_playing.set_text("✦ yt-dlp updated — restarting stream…")
         ch = self._channels.get(self._current_idx)
         if not ch:
@@ -628,10 +694,20 @@ class StreamerOverlay(Gtk.Window):
         self._player.restart(ch.url)
         return False
 
+    def _on_stall_update_failed(self):
+        with self._stall_recovery_lock:
+            self._stall_recovery_active = False
+        self._now_playing.set_text("✦ UPDATE FAILED — check connection and retry manually")
+        return False
+
     def _on_idle(self):
         if self._stack.get_visible_child_name() != "search":
             self._stack.set_visible_child_name("nosignal")
         self._paused = False
+        self._playing_search_result = False
+        self._state["time_pos"] = 0
+        self._state["duration"] = 0
+        self._time_label.set_text("")
         if self._btn_play:
             self._btn_play.set_label("▌▌")
         return False
@@ -652,11 +728,18 @@ class StreamerOverlay(Gtk.Window):
         return False
 
     def get_mpv_wid(self) -> int:
-        return self._mpv_area.get_window().get_xid()
+        window = self._mpv_area.get_window()
+        if window is None or not hasattr(window, "get_xid"):
+            raise RuntimeError(
+                "StreamerBox currently supports embedded mpv only on X11/XWayland sessions. "
+                "Run it from an X11 session instead of native Wayland."
+            )
+        return window.get_xid()
 
     def start_ui(self):
         ch = self._channels.get(0)
         if ch:
+            self._playing_search_result = False
             self._current_idx = 0
             self._update_now_playing(ch.name)
             self._refresh_channel_strip()

@@ -51,12 +51,13 @@ def test_save_new_channel_assigns_next_id(tmp_path):
     with open(saved_path, "w") as f:
         yaml.dump({"channels": []}, f)
     mgr = ChannelManager(channels_path=base, saved_path=saved_path)
-    mgr.save_channel(name="Akira", url="https://yt.com/2")
+    status = mgr.save_channel(name="Akira", url="https://yt.com/2")
+    assert status == ChannelManager.STATUS_ADDED
     assert len(mgr.channels) == 2
     assert mgr.channels[1].id == 2
 
 
-def test_save_duplicate_url_silently_skipped(tmp_path):
+def test_save_duplicate_url_returns_already_exists(tmp_path):
     base = make_yaml(tmp_path, "channels.yaml", {
         "channels": [{"id": 1, "name": "Bebop", "url": "https://yt.com/1"}]
     })
@@ -64,8 +65,27 @@ def test_save_duplicate_url_silently_skipped(tmp_path):
     with open(saved_path, "w") as f:
         yaml.dump({"channels": []}, f)
     mgr = ChannelManager(channels_path=base, saved_path=saved_path)
-    mgr.save_channel(name="Bebop Again", url="https://yt.com/1")
+    status = mgr.save_channel(name="Bebop Again", url="https://yt.com/1")
+    assert status == ChannelManager.STATUS_ALREADY_EXISTS
     assert len(mgr.channels) == 1
+
+
+def test_remove_channel_skips_malformed_base_entries(tmp_path):
+    base = make_yaml(tmp_path, "channels.yaml", {
+        "channels": [
+            {"id": 1, "name": "Base", "url": "https://yt.com/base"},
+            {"id": 2, "name": "Broken"},
+        ]
+    })
+    saved = make_yaml(tmp_path, "saved.yaml", {
+        "channels": [{"id": 3, "name": "Saved", "url": "https://yt.com/saved"}]
+    })
+    mgr = ChannelManager(channels_path=base, saved_path=saved)
+
+    removed = mgr.remove_channel("https://yt.com/saved")
+
+    assert removed is True
+    assert [ch.url for ch in mgr.channels] == ["https://yt.com/base"]
 
 
 def test_get_channel_by_index(tmp_path):

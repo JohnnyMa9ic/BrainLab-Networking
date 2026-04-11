@@ -1,9 +1,11 @@
 import os
 import json
+import shutil
 import subprocess
 from dataclasses import dataclass
 from typing import Optional
 
+YTDLP = shutil.which("yt-dlp") or "/usr/local/bin/yt-dlp"
 
 AUTH_PATTERNS = ["sign in", "premium", "members only", "403"]
 
@@ -43,7 +45,7 @@ def _run_ytdlp(cmd: list[str]) -> tuple[list[SearchResult], str]:
         stderr = result.stderr.strip()
         if is_auth_error(stderr):
             return [], "AUTH REQUIRED — run: yt-dlp --cookies-from-browser firefox --cookies ~/.config/streamerbox/cookies.txt --skip-download https://www.youtube.com"
-        return [], f"PLAYBACK ERROR — {stderr[:200]}"
+        return [], f"ERROR — {stderr[:200]}"
 
     results = []
     for line in result.stdout.strip().splitlines():
@@ -62,7 +64,7 @@ def search(query: str, max_results: int = 25) -> tuple[list[SearchResult], str]:
     home = os.path.expanduser("~")
     cookies = os.path.join(home, ".config/streamerbox/cookies.txt")
     cmd = [
-        "/usr/local/bin/yt-dlp",
+        YTDLP,
         "--cookies", cookies,
         "--dump-json",
         "--flat-playlist",
@@ -77,10 +79,13 @@ def search_playlists(query: str, max_results: int = 25) -> tuple[list[SearchResu
     import urllib.parse
     home = os.path.expanduser("~")
     cookies = os.path.join(home, ".config/streamerbox/cookies.txt")
-    # sp=EgIQAw%3D%3D is YouTube's playlist filter
+    # WARNING: yt-dlp does not expose a native playlist search extractor in this
+    # environment (ytsearchplaylist: is unsupported), so this relies on YouTube's
+    # web search filter URL. sp=EgIQAw%3D%3D is the current "playlist" filter and
+    # may break if YouTube changes its web UI or query params.
     search_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}&sp=EgIQAw%3D%3D"
     cmd = [
-        "/usr/local/bin/yt-dlp",
+        YTDLP,
         "--cookies", cookies,
         "--dump-json",
         "--flat-playlist",
