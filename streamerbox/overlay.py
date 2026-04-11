@@ -52,11 +52,24 @@ class StreamerOverlay(Gtk.Window):
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(vbox)
 
-        # Stack: nosignal / video / search — takes all available space
+        # Stack: nosignal / video / search — wrapped in Overlay for floating buttons
         self._stack = Gtk.Stack()
         self._stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self._stack.set_transition_duration(150)
-        vbox.pack_start(self._stack, True, True, 0)
+
+        self._video_overlay = Gtk.Overlay()
+        self._video_overlay.add(self._stack)
+
+        # Floating exit button — only shown in fullscreen (mpv steals keyboard focus)
+        self._fs_exit_btn = Gtk.Button(label="✕ EXIT FULLSCREEN")
+        self._fs_exit_btn.set_name("fs-exit-btn")
+        self._fs_exit_btn.set_halign(Gtk.Align.END)
+        self._fs_exit_btn.set_valign(Gtk.Align.END)
+        self._fs_exit_btn.set_no_show_all(True)
+        self._fs_exit_btn.connect("clicked", lambda _: self._toggle_fullscreen())
+        self._video_overlay.add_overlay(self._fs_exit_btn)
+
+        vbox.pack_start(self._video_overlay, True, True, 0)
 
         # Page: no signal
         self._stack.add_named(self._build_nosignal(), "nosignal")
@@ -361,8 +374,10 @@ class StreamerOverlay(Gtk.Window):
         if self._bar:
             if self._fullscreen:
                 self._bar.hide()
+                self._fs_exit_btn.show()
             else:
                 self._bar.show()
+                self._fs_exit_btn.hide()
 
     def _delete_current_channel(self):
         ch = self._channels.get(self._current_idx)

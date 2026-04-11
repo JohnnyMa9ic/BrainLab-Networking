@@ -201,6 +201,25 @@ window {
     color: #ffffff;
 }
 
+/* Floating fullscreen-exit button (overlaid on video, bottom-right) */
+#fs-exit-btn {
+    background-color: rgba(5, 0, 8, 0.75);
+    border: 1px solid rgba(255, 0, 255, 0.5);
+    border-radius: 2px;
+    color: rgba(255, 102, 255, 0.8);
+    font-family: "Monospace", monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    margin: 12px;
+}
+
+#fs-exit-btn:hover {
+    background-color: rgba(255, 0, 255, 0.15);
+    border-color: #ff00ff;
+    color: #ff66ff;
+}
+
 /* Search tab toggle buttons */
 #tab-btn {
     background: none;
