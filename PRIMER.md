@@ -7,7 +7,7 @@ Pick up here in the next session.
 ## Machine: Thought-Reliquary
 - Ubuntu 24.04, X11 (Wayland disabled), 2-in-1 tablet/laptop
 - IP: `192.168.4.100` — SSH + TigerVNC (port 5900)
-- **Display is `:1`** — GDM occupies `:0`, GNOME user session runs on `:1`
+- **Display is `:0`** — after a system update, GNOME user session moved to `:0` (was `:1`)
 - Display panel is physically inverted in chassis:
   - `unflip` alias = `xrandr --rotate inverted` (visually correct)
   - `flip` alias = `xrandr --rotate normal` (tablet mode)
@@ -21,7 +21,7 @@ Both services survive SSH session close, restart on crash, start on GNOME login.
 
 | Service | File | What it does |
 |---|---|---|
-| `x11vnc.service` | `~/.config/systemd/user/x11vnc.service` | VNC server on display `:1`, port 5900 |
+| `x11vnc.service` | `~/.config/systemd/user/x11vnc.service` | VNC server on display `:0`, port 5900 |
 | `streamerbox.service` | `~/.config/systemd/user/streamerbox.service` | StreamerBox ambient player |
 
 Manage with:
@@ -40,7 +40,9 @@ Linger enabled (`loginctl enable-linger johnny`) — services survive session cy
 - **App:** `~/Applications/Reliquary VNC.app` (pinned to Dock, Spotlight: "Reliquary VNC")
 - **Password file:** `~/.vnc/passwd_reliquary` (copied from Linux, auto-used by app)
 - **No password prompt** — launches and connects directly
-- If VNC stops working: SSH in → `systemctl --user restart x11vnc`
+- If VNC stops working: SSH in → `systemctl --user restart x11vnc.service`
+- If display changes after an update, check `echo $DISPLAY` and update the service file + restart
+- Clipboard sync works out of the box — if it stops, just restart x11vnc and reconnect TigerVNC
 
 ---
 
@@ -117,3 +119,5 @@ Supporting files on this machine:
 - Channel switching (◀◀/▶▶) works correctly ✓
 - Standby screen: Lithium Dreams v3 (magenta CRT, bonsai + skull wireframes) ✓
 - Claude Code session protocol (auto-PRIMER fetch + closing handshake) ✓
+- StreamerBox: ADD CH button (dialog with name+URL), fullscreen hides bar + floating exit button ✓
+- Clipboard sync via VNC works (x11vnc default, no extra flags needed) ✓
