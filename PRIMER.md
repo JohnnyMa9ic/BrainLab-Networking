@@ -1,4 +1,4 @@
-# BrainLab Session Primer — 2026-03-29
+# BrainLab Session Primer — 2026-04-11
 
 Pick up here in the next session.
 
@@ -89,6 +89,26 @@ yt-dlp --cookies-from-browser firefox \
 
 ---
 
+## Claude Code Session Protocol
+
+GitHub (`JohnnyMa9ic/BrainLab-Networking`) is the single source of truth for BrainLab knowledge.
+
+### Opening sequence (automatic)
+A `SessionStart` hook at `~/.claude/hooks/session-start-primer.sh` fetches this PRIMER.md live from GitHub and injects it into Claude's context at the start of every session. No manual "read the PRIMER" needed.
+
+### Closing handshake (every session)
+At session end, Claude proactively:
+1. Updates this PRIMER.md with any new facts, fixes, or state changes from the session
+2. Commits: `Update PRIMER for YYYY-MM-DD session`
+3. Pushes to GitHub
+
+Supporting files on this machine:
+- Hook script: `~/.claude/hooks/session-start-primer.sh`
+- Claude instructions: `~/CLAUDE.md`
+- Hook registered in: `~/.claude/settings.json` under `hooks.SessionStart`
+
+---
+
 ## Known Working / Stable
 - x11vnc persists after closing Mac terminal ✓
 - StreamerBox persists after closing Mac terminal ✓
@@ -96,3 +116,4 @@ yt-dlp --cookies-from-browser firefox \
 - Playlist track navigation (|◀/▶|) works correctly ✓
 - Channel switching (◀◀/▶▶) works correctly ✓
 - Standby screen: Lithium Dreams v3 (magenta CRT, bonsai + skull wireframes) ✓
+- Claude Code session protocol (auto-PRIMER fetch + closing handshake) ✓
