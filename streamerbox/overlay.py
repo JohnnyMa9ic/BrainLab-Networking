@@ -24,6 +24,7 @@ class StreamerOverlay(Gtk.Window):
         self._state = {"time_pos": 0, "duration": 0, "title": "", "idle": True}
         self._paused = False
         self._fullscreen = False
+        self._bar = None
         self._playlist_pos_times = []
         self._searching = False
         self._playlist_pos = 0
@@ -68,8 +69,9 @@ class StreamerOverlay(Gtk.Window):
         # Page: search
         self._stack.add_named(self._build_search_page(), "search")
 
-        # Control bar — always visible
-        vbox.pack_start(self._build_bar(), False, False, 0)
+        # Control bar — always visible (hidden in fullscreen)
+        self._bar = self._build_bar()
+        vbox.pack_start(self._bar, False, False, 0)
 
         self.show_all()
         self._stack.set_visible_child_name("nosignal")
@@ -164,6 +166,7 @@ class StreamerOverlay(Gtk.Window):
         hint_row.pack_start(Gtk.Label(label=""), True, True, 0)
 
         danger_defs = [
+            ("ADD CH",    lambda _: self._add_channel_dialog()),
             ("REMOVE CH", lambda _: self._delete_current_channel()),
             ("QUIT",      lambda _: self._on_quit()),
         ]
@@ -355,6 +358,11 @@ class StreamerOverlay(Gtk.Window):
 
     def _on_window_state(self, window, event):
         self._fullscreen = bool(event.new_window_state & Gdk.WindowState.FULLSCREEN)
+        if self._bar:
+            if self._fullscreen:
+                self._bar.hide()
+            else:
+                self._bar.show()
 
     def _delete_current_channel(self):
         ch = self._channels.get(self._current_idx)
@@ -370,6 +378,48 @@ class StreamerOverlay(Gtk.Window):
                 self._update_now_playing(next_ch.name)
         else:
             self._now_playing.set_text("✦ BASE CHANNELS CANNOT BE REMOVED")
+
+    def _add_channel_dialog(self):
+        dialog = Gtk.Dialog(title="Add Channel", parent=self, flags=Gtk.DialogFlags.MODAL)
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Add", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_spacing(6)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+        content.set_margin_start(12)
+        content.set_margin_end(12)
+
+        name_label = Gtk.Label(label="Name:")
+        name_label.set_halign(Gtk.Align.START)
+        name_entry = Gtk.Entry()
+        name_entry.set_placeholder_text("e.g. Lofi Hip Hop")
+        name_entry.set_activates_default(True)
+
+        url_label = Gtk.Label(label="URL:")
+        url_label.set_halign(Gtk.Align.START)
+        url_entry = Gtk.Entry()
+        url_entry.set_placeholder_text("YouTube URL or playlist URL")
+        url_entry.set_activates_default(True)
+
+        content.add(name_label)
+        content.add(name_entry)
+        content.add(url_label)
+        content.add(url_entry)
+        dialog.show_all()
+        name_entry.grab_focus()
+
+        response = dialog.run()
+        name = name_entry.get_text().strip()
+        url = url_entry.get_text().strip()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK and name and url:
+            self._channels.save_channel(name, url)
+            self._refresh_channel_strip()
+            self._now_playing.set_text(f"✦ ADDED: {name.upper()}")
 
     def _toggle_pause(self):
         self._player.cycle_pause()
