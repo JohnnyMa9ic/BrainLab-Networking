@@ -1,13 +1,15 @@
 import os
 import time
+import random
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 import threading
 from search import search as do_search, search_playlists as do_search_playlists
+import theme
 
-THEME_PATH = os.path.join(os.path.dirname(__file__), "themes/cyberpunk.css")
+THEME_PATH    = os.path.join(os.path.dirname(__file__), "themes/ghost.css")
 NOSIGNAL_PATH = os.path.join(os.path.dirname(__file__), "assets/nosignal.png")
 
 
@@ -33,6 +35,10 @@ class StreamerOverlay(Gtk.Window):
         self._playing_search_result = False
         self._stall_recovery_lock = threading.Lock()
         self._stall_recovery_active = False
+        self._session_start = time.time()
+        self._bob_milestone_fired = False
+        self._stall_attempt_count = 0
+        GLib.timeout_add(7_200_000, self._bob_session_milestone)
 
         self._apply_css()
         self._build_window()
@@ -105,7 +111,7 @@ class StreamerOverlay(Gtk.Window):
 
         # Row 1: now-playing + time
         info_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self._now_playing = Gtk.Label(label="✦ NO SIGNAL")
+        self._now_playing = Gtk.Label(label=theme.GHOST["now_playing_idle"])
         self._now_playing.set_name("now-playing")
         self._now_playing.set_halign(Gtk.Align.START)
         self._time_label = Gtk.Label(label="")
@@ -184,7 +190,7 @@ class StreamerOverlay(Gtk.Window):
         danger_defs = [
             ("ADD CH",    lambda _: self._add_channel_dialog()),
             ("REMOVE CH", lambda _: self._delete_current_channel()),
-            ("QUIT",      lambda _: self._on_quit()),
+            ("QUIT",      lambda _: self._warden_quit()),
         ]
         for i, (label, cb) in enumerate(danger_defs):
             if i > 0:
@@ -286,6 +292,10 @@ class StreamerOverlay(Gtk.Window):
             self._open_search()
             return True
         if key == "q":
+            self._now_playing.set_text(theme.WARDEN_SHUTDOWN)
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+            import time as _time; _time.sleep(1.2)
             self._on_quit()
             return True
         if key in ("1","2","3","4","5","6","7","8","9"):
@@ -296,12 +306,15 @@ class StreamerOverlay(Gtk.Window):
             return True
         if key == "Left":
             self._player.seek(-10)
+            self._player.show_text(theme.GHOST["osd_seek_back"])
             return True
         if key == "Right":
             self._player.seek(10)
+            self._player.show_text(theme.GHOST["osd_seek_fwd"])
             return True
         if key == "m":
             self._player.cycle_mute()
+            self._player.show_text(theme.GHOST["osd_muted"])
             return True
         if key == "j":
             self._player.cycle_sub()
@@ -354,6 +367,13 @@ class StreamerOverlay(Gtk.Window):
             return True
         return False
 
+    def _warden_quit(self):
+        self._now_playing.set_text(theme.WARDEN_SHUTDOWN)
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+        import time as _time; _time.sleep(1.2)
+        self._on_quit()
+
     def _stop_playback(self):
         self._player.stop_playback()
         self._paused = False
@@ -371,6 +391,10 @@ class StreamerOverlay(Gtk.Window):
                 self._bar.hide()
             else:
                 self._bar.show()
+            visible = self._bar.get_visible()
+            self._player.show_text(
+                theme.GHOST["interface_visible"] if visible else theme.GHOST["interface_suppressed"]
+            )
 
     def _toggle_fullscreen(self):
         if self._fullscreen:
@@ -447,10 +471,33 @@ class StreamerOverlay(Gtk.Window):
         if response == Gtk.ResponseType.OK and name and url:
             status = self._channels.save_channel(name, url)
             if status == self._channels.STATUS_ADDED:
+                self._player.show_text(theme.GHOST["osd_catalog_confirmed"])
+                msg = theme.GHOST["osd_catalog_confirmed"]
                 self._refresh_channel_strip()
-                self._now_playing.set_text(f"✦ ADDED: {name.upper()}")
             elif status == self._channels.STATUS_ALREADY_EXISTS:
-                self._now_playing.set_text(f"✦ ALREADY SAVED: {name.upper()}")
+                self._show_bob("duplicate_add")
+                msg = theme.GHOST["osd_already_indexed"]
+            else:
+                msg = theme.GHOST["osd_catalog_fault"]
+            self._now_playing.set_text(msg)
+
+    def _show_bob(self, trigger_key: str):
+        lines = list(theme.BOB[trigger_key])
+        if lines[0] is None:
+            lines[0] = theme.bob_random_title()
+        osd_lines = []
+        for l in lines:
+            if l.startswith("BOB ONLINE"):
+                osd_lines.append(f"> {l}")
+            else:
+                osd_lines.append(f"  {l}")
+        self._player.show_text("\n".join(osd_lines), duration=6000)
+
+    def _bob_session_milestone(self) -> bool:
+        if not self._bob_milestone_fired:
+            self._bob_milestone_fired = True
+            self._show_bob("session_milestone")
+        return False
 
     def _toggle_pause(self):
         self._player.cycle_pause()
@@ -459,6 +506,8 @@ class StreamerOverlay(Gtk.Window):
             self._paused = paused
         if self._btn_play:
             self._btn_play.set_label("►" if self._paused else "▌▌")
+        osd = theme.GHOST["osd_pause"] if self._paused else theme.GHOST["osd_resume"]
+        self._player.show_text(osd)
 
     def _playlist_next(self):
         self._user_nav_time = time.time()
@@ -467,6 +516,7 @@ class StreamerOverlay(Gtk.Window):
             self._player.goto_playlist_index((self._playlist_pos + 1) % self._playlist_count)
         else:
             self._player.playlist_next()
+        self._player.show_text(theme.GHOST["osd_node_fwd"])
 
     def _playlist_prev(self):
         self._user_nav_time = time.time()
@@ -475,6 +525,7 @@ class StreamerOverlay(Gtk.Window):
             self._player.goto_playlist_index((self._playlist_pos - 1) % self._playlist_count)
         else:
             self._player.playlist_prev()
+        self._player.show_text(theme.GHOST["osd_node_back"])
 
     def _change_channel(self, delta: int):
         if self._channels.count() == 0:
@@ -489,6 +540,11 @@ class StreamerOverlay(Gtk.Window):
             self._player.load(ch.url)
             self._update_now_playing(ch.name)
         self._refresh_channel_strip()
+        ch = self._channels.get(self._current_idx)
+        if ch:
+            self._player.show_text(theme.ghost_channel(ch.id, ch.name))
+        if random.random() < 0.05:
+            GLib.timeout_add(2500, lambda: self._show_bob("random_nav") or False)
 
     def _jump_to_channel(self, idx: int):
         if self._channels.get(idx):
@@ -508,6 +564,7 @@ class StreamerOverlay(Gtk.Window):
                 return
 
     def _open_search(self):
+        self._player.show_text(theme.GHOST["osd_query_open"])
         if self._stack.get_visible_child_name() == "search":
             return
         self._search_results = []
@@ -567,6 +624,8 @@ class StreamerOverlay(Gtk.Window):
                 self._focus_search_results()
             else:
                 self._focus_search_entry()
+        if not self._search_results:
+            self._show_bob("zero_results")
         return False
 
     def _clear_results(self):
@@ -597,6 +656,7 @@ class StreamerOverlay(Gtk.Window):
             self._player.load(r.url)
             self._state["title"] = r.name
             self._now_playing.set_text(f"✦ SEARCH — {r.name.upper()[:40]}")
+            self._player.show_text(theme.ghost_search_play(r.name))
             self._close_search()
 
     def _refresh_channel_strip(self):
@@ -687,6 +747,12 @@ class StreamerOverlay(Gtk.Window):
     def _after_ytdlp_update(self):
         with self._stall_recovery_lock:
             self._stall_recovery_active = False
+        self._stall_attempt_count += 1
+        if self._stall_attempt_count == 1:
+            self._show_bob("stall_recovery")
+        elif self._stall_attempt_count == 2:
+            self._show_bob("second_attempt")
+            self._stall_attempt_count = 0
         self._now_playing.set_text("✦ yt-dlp updated — restarting stream…")
         ch = self._channels.get(self._current_idx)
         if not ch:
@@ -724,7 +790,11 @@ class StreamerOverlay(Gtk.Window):
             s = int(s)
             return f"{s//60}:{s%60:02d}"
         if dur:
-            self._time_label.set_text(f"{fmt(pos)} / {fmt(dur)}")
+            if self._playlist_count > 0:
+                node_str = theme.ghost_node_status(self._playlist_pos + 1, self._playlist_count)
+                self._time_label.set_text(f"{fmt(pos)} / {fmt(dur)}  {node_str}")
+            else:
+                self._time_label.set_text(f"{fmt(pos)} / {fmt(dur)}")
         return False
 
     def get_mpv_wid(self) -> int:
