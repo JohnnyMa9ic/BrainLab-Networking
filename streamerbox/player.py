@@ -189,6 +189,10 @@ class MpvPlayer:
         """Stop current stream and return mpv to idle (shows nosignal)."""
         self._send(build_ipc_command("stop"))
 
+    def show_text(self, text: str, duration: int = 3000):
+        """Display text on mpv OSD via IPC show-text command."""
+        self._send(build_ipc_command("show-text", text, duration))
+
     def cycle_mute(self):
         self._send(build_ipc_command("cycle", "mute"))
 
