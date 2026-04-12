@@ -1,11 +1,12 @@
+# streamerbox/main.py
 import os
-import time
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 from channels import ChannelManager
 from player import MpvPlayer
 from overlay import StreamerOverlay
+from dossier import DossierWindow
 
 
 def is_wayland_session() -> bool:
@@ -66,8 +67,7 @@ def main():
     overlay_ref[0] = overlay
     overlay.connect("destroy", lambda w: on_quit())
 
-    # Briefly show the video page so the DrawingArea is realized and has an XID,
-    # then switch back to nosignal while mpv buffers.
+    # Realize the video DrawingArea so mpv can embed into it
     overlay._stack.set_visible_child_name("video")
     while Gtk.events_pending():
         Gtk.main_iteration()
@@ -78,41 +78,33 @@ def main():
         show_startup_error(str(e))
         return
     overlay._stack.set_visible_child_name("nosignal")
+    overlay.hide()  # hidden until dossier completes
 
-    # Start mpv embedded inside the GTK DrawingArea (idle; first URL loaded via IPC below)
+    # Start mpv embedded (idle — first URL loaded after dossier via IPC)
     player.start(wid=wid)
 
-    # Watchdog: restart mpv if it crashes
+    # Watchdog: restart mpv if it crashes or IPC dies
     def watchdog():
         if _quitting[0]:
-            return False  # deregister callback
+            return False
         if not player.is_alive() or player.has_ipc_failed():
             ch = channels.get(overlay._current_idx)
             if ch:
                 player.restart(ch.url)
-        return True  # keep repeating
+        return True
 
     GLib.timeout_add(2000, watchdog)
 
-    # Update UI immediately; defer the first IPC load until the socket is accepting connections.
-    overlay.start_ui()
-    load_deadline = [time.time() + 10.0]
+    def on_dossier_complete():
+        """Called by DossierWindow when the sequence finishes."""
+        overlay.show_all()
+        overlay.start_ui()
+        overlay.start_load()
 
-    def load_initial_channel():
-        if _quitting[0]:
-            return False
-        if player.ipc_socket_ready():
-            overlay.start_load()
-            return False
-        if time.time() >= load_deadline[0]:
-            message = "StreamerBox could not connect to mpv IPC within 10 seconds. Startup was aborted."
-            print(message)
-            show_startup_error(message)
-            on_quit()
-            return False
-        return True
+    # Show the WY dossier — polls IPC readiness internally and calls
+    # on_dossier_complete() when done, then destroys itself.
+    DossierWindow(channels=channels, player=player, on_complete=on_dossier_complete)
 
-    GLib.timeout_add(100, load_initial_channel)
     Gtk.main()
 
 
