@@ -37,6 +37,7 @@ class StreamerOverlay(Gtk.Window):
         self._stall_recovery_active = False
         self._session_start = time.time()
         self._bob_milestone_fired = False
+        self._bob_nav_pending = False
         self._stall_attempt_count = 0
         GLib.timeout_add(7_200_000, self._bob_session_milestone)
 
@@ -292,11 +293,7 @@ class StreamerOverlay(Gtk.Window):
             self._open_search()
             return True
         if key == "q":
-            self._now_playing.set_text(theme.WARDEN_SHUTDOWN)
-            while Gtk.events_pending():
-                Gtk.main_iteration()
-            import time as _time; _time.sleep(1.2)
-            self._on_quit()
+            self._warden_quit()
             return True
         if key in ("1","2","3","4","5","6","7","8","9"):
             self._jump_to_channel_id(int(key))
@@ -483,6 +480,8 @@ class StreamerOverlay(Gtk.Window):
 
     def _show_bob(self, trigger_key: str):
         lines = list(theme.BOB[trigger_key])
+        if not lines:
+            return
         if lines[0] is None:
             lines[0] = theme.bob_random_title()
         osd_lines = []
@@ -543,8 +542,13 @@ class StreamerOverlay(Gtk.Window):
         ch = self._channels.get(self._current_idx)
         if ch:
             self._player.show_text(theme.ghost_channel(ch.id, ch.name))
-        if random.random() < 0.05:
-            GLib.timeout_add(2500, lambda: self._show_bob("random_nav") or False)
+        if random.random() < 0.05 and not self._bob_nav_pending:
+            self._bob_nav_pending = True
+            def _fire_bob():
+                self._show_bob("random_nav")
+                self._bob_nav_pending = False
+                return False
+            GLib.timeout_add(2500, _fire_bob)
 
     def _jump_to_channel(self, idx: int):
         if self._channels.get(idx):
@@ -761,6 +765,7 @@ class StreamerOverlay(Gtk.Window):
         return False
 
     def _on_stall_update_failed(self):
+        self._stall_attempt_count = 0
         with self._stall_recovery_lock:
             self._stall_recovery_active = False
         self._now_playing.set_text("✦ UPDATE FAILED — check connection and retry manually")
