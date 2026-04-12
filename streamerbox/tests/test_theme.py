@@ -29,6 +29,14 @@ def test_bob_trigger_map_complete():
         lines = theme.BOB[key]
         assert isinstance(lines, list)
         assert len(lines) >= 2
+        if key == "random_nav":
+            assert lines[0] is None, "random_nav index 0 must be None (sentinel)"
+            for line in lines[1:]:
+                assert isinstance(line, str) and len(line) > 0, \
+                    f"random_nav line {line!r} must be a non-empty string"
+        else:
+            assert isinstance(lines[0], str) and lines[0] is not None and len(lines[0]) > 0, \
+                f"BOB[{key!r}] index 0 must be a non-None, non-empty string (BOB ONLINE header)"
 
 def test_bob_title_pool():
     assert hasattr(theme, "BOB_TITLES")
@@ -47,3 +55,4 @@ def test_dossier_sequence():
     for item in theme.DOSSIER_LINES:
         assert isinstance(item, dict)
         assert "text" in item
+        assert "check" in item
