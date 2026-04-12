@@ -427,7 +427,7 @@ class StreamerOverlay(Gtk.Window):
                 self._update_now_playing(next_ch.name)
             else:
                 self._player.stop_playback()
-                self._now_playing.set_text("✦ NO SIGNAL")
+                self._now_playing.set_text(theme.GHOST["now_playing_idle"])
         else:
             self._now_playing.set_text("✦ BASE CHANNELS CANNOT BE REMOVED")
 
